@@ -1,4 +1,6 @@
 const Alexa = require('ask-sdk-core');
+const MicrosoftGraph = require("@microsoft/microsoft-graph-client");
+
 
 const LaunchRequestHandler = {
   canHandle(handlerInput) {
@@ -65,28 +67,8 @@ const ScheduleIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'ScheduleIntent';
   },
   handle(handlerInput) {
-    const currentIntent = handlerInput.requestEnvelope.request.intent
+    const currentIntent = handlerInput.requestEnvelope.request.intent;
     if (handlerInput.requestEnvelope.request.dialogState === "STARTED") {
-    // Pre-fill slots: update the intent object with slot values for which
-    // you have defaults, then return Dialog.Delegate with this updated intent
-    // in the updatedIntent property.
-    /*return handlerInput.responseBuilder
-      .addDelegateDirective({
-        "type": "Dialog.Delegate",
-        "updatedIntent": {
-          "name": "ScheduleIntent",
-          "confirmationStatus": "NONE",
-          "slots": {
-            "who": {
-              "name": "who",
-              "value": "",
-              "confirmationStatus": "NONE"
-            }
-          }
-        }
-      })
-      .getResponse();
-    ;*/
       
       return handlerInput.responseBuilder
         .addDelegateDirective(currentIntent)
@@ -98,7 +80,20 @@ const ScheduleIntentHandler = {
         .getResponse();
     } else {
         // Dialog is now complete and all required slots should be filled,
-        // so call your normal intent handler. 
+        // so call your normal intent handler.
+      let client = MicrosoftGraph.Client.init({
+        authProvider: function (done) {
+            done(null, handlerInput.requestEnvelope.session.user.accessToken); //first parameter takes an error if you can't get an access token
+        }
+      });
+      console.log('Token ', handlerInput.requestEnvelope.session.user.accessToken, 'Going to call graph API');
+      client
+        .api('/me')
+        .get(function (err, res) {
+          console.log('Sucess calling graph ', res); // prints info about authenticated user
+          console.log('Error calling graph ', err);
+      });
+  
       const filledSlots = handlerInput.requestEnvelope.request.intent.slots;
       const slotValues = getSlotValues(filledSlots);
       return handlerInput.responseBuilder
