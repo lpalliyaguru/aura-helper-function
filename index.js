@@ -46,7 +46,6 @@ const CanFulfillIntentRequestHandler = {
 
 const HelloWorldIntentHandler = {
   canHandle(handlerInput) {
-    console.log('Can Handle Hello world ? ');
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
       && handlerInput.requestEnvelope.request.intent.name === 'HelloWorldIntent';
   },
@@ -62,40 +61,67 @@ const HelloWorldIntentHandler = {
 
 const ScheduleIntentHandler = {
   canHandle(handlerInput) {
-    console.log('Can Schedule a meeting  ? ');
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
       && handlerInput.requestEnvelope.request.intent.name === 'ScheduleIntent';
   },
   handle(handlerInput) {
-    const filledSlots = handlerInput.requestEnvelope.request.intent.slots;
-    const slotValues = getSlotValues(filledSlots);
-    console.log('Slot Values ' , slotValues);
-    const speechText = 'Sure. Let me create one!';
 
-    return handlerInput.responseBuilder
-      .withCanFulfillIntent(
-      {
-        "canFulfill": "YES",
-        "slots":{
+    if (handlerInput.requestEnvelope.request.dialogState === "STARTED") {
+    // Pre-fill slots: update the intent object with slot values for which
+    // you have defaults, then return Dialog.Delegate with this updated intent
+    // in the updatedIntent property.
+    /*return handlerInput.responseBuilder
+      .addDelegateDirective({
+        "type": "Dialog.Delegate",
+        "updatedIntent": {
+          "name": "ScheduleIntent",
+          "confirmationStatus": "NONE",
+          "slots": {
             "who": {
-                "canUnderstand": "YES",
-                "canFulfill": "YES"
-              },
-            "when": {
-              "canUnderstand": "YES",
-              "canFulfill": "YES"
+              "name": "who",
+              "value": "",
+              "confirmationStatus": "NONE"
             }
           }
+        }
       })
-      .speak(speechText)
-      .withSimpleCard('Sure', speechText)
       .getResponse();
+    ;*/
+      const currentIntent = handlerInput.requestEnvelope.request.intent
+      return handlerInput.responseBuilder
+        .addDelegateDirective(currentIntent)
+        .getResponse();
+    } else if (handlerInput.requestEnvelope.request.dialogState != "COMPLETED"){
+        // return a Dialog.Delegate directive with no updatedIntent property.
+    } else {
+        // Dialog is now complete and all required slots should be filled,
+        // so call your normal intent handler. 
+      const filledSlots = handlerInput.requestEnvelope.request.intent.slots;
+      const slotValues = getSlotValues(filledSlots);
+      return handlerInput.responseBuilder
+        .withCanFulfillIntent(
+        {
+          "canFulfill": "YES",
+          "slots":{
+              "who": {
+                  "canUnderstand": "YES",
+                  "canFulfill": "YES"
+                },
+              "when": {
+                "canUnderstand": "YES",
+                "canFulfill": "YES"
+              }
+            }
+        })
+        .speak('Sure. Let me create one!')
+        .withSimpleCard('Sure', 'Sure. Let me create one!')
+        .getResponse();
+    }
   }
 };
 
 const HelpIntentHandler = {
   canHandle(handlerInput) {
-     console.log('Can Handle Help  ? ');
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
       && handlerInput.requestEnvelope.request.intent.name === 'AMAZON.HelpIntent';
   },
@@ -153,8 +179,8 @@ const ErrorHandler = {
 let skill;
 
 exports.handler = async function (event, context) {
-  console.log('REQUEST++++' ,event);
-  Alexa.APP_ID='amzn1.ask.skill.902806d2-ccaa-444c-929c-6c2e7a4d35d4';
+  console.log('REQUEST++++' ,JSON.stringify(event));
+  Alexa.appId = 'amzn1.ask.skill.902806d2-ccaa-444c-929c-6c2e7a4d35d4';
   if (!skill) {
     skill = Alexa.SkillBuilders.custom()
       .addRequestHandlers(
@@ -171,7 +197,7 @@ exports.handler = async function (event, context) {
   }
 
   const response = await skill.invoke(event, context);
-  console.log('RESPONSE++++', response);
+  console.log('RESPONSE++++', JSON.stringify(response));
 
   return response;
 };
